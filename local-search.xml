@@ -8,7 +8,7 @@
     <link href="/2025/02/03/MetroMap/"/>
     <url>/2025/02/03/MetroMap/</url>
     
-    <content type="html"><![CDATA[<h1 id="怎样画一张地铁图-Ai"><a href="#怎样画一张地铁图-Ai" class="headerlink" title="怎样画一张地铁图 | Ai"></a>怎样画一张地铁图 | Ai</h1><p>[<a href="https://alist.ckxtm.com/d/Quark/image/%E6%B1%9F%E9%98%B3%E5%9C%B0%E9%93%81%E4%BA%8C%E6%9C%9F%E7%BA%BF%E8%B7%AF%E5%9B%BE2.png]">https://alist.ckxtm.com/d/Quark/image/%E6%B1%9F%E9%98%B3%E5%9C%B0%E9%93%81%E4%BA%8C%E6%9C%9F%E7%BA%BF%E8%B7%AF%E5%9B%BE2.png]</a></p><p>1.使用钢笔工具，点击创建锚点后，按住 shift 移动光标（shift使光标只能水平、垂直、45°移动），继续创建锚点画出线路基本走向</p><p>2.调整描边颜色、端点和转角为圆滑</p><p>3.在 fx - 风格化 - 圆角 中选择线路转弯处圆角半径</p><p>4.使用椭圆工具，按住 shift 画出正圆，作为地铁站图标</p><p>5.搭配使用多边形工具、钢笔工具、曲率工具画出不规则图标</p><p>6.添加一点创意</p><p>7.导出时选择全画布导出</p>]]></content>
+    <content type="html"><![CDATA[<h1 id="怎样画一张地铁图-Ai"><a href="#怎样画一张地铁图-Ai" class="headerlink" title="怎样画一张地铁图 | Ai"></a>怎样画一张地铁图 | Ai</h1><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs text">&lt;img src=&quot;https://alist.ckxtm.com/d/AliDrive/img/%E6%B1%9F%E9%98%B3%E5%9C%B0%E9%93%81%E4%BA%8C%E6%9C%9F%E7%BA%BF%E8%B7%AF%E5%9B%BE2%20-%20%E5%89%AF%E6%9C%AC.png&quot; width=&quot;50%&quot; height=&quot;50%&quot;&gt;<br></code></pre></td></tr></table></figure><p>1.使用钢笔工具，点击创建锚点后，按住 shift 移动光标（shift使光标只能水平、垂直、45°移动），继续创建锚点画出线路基本走向</p><p>2.调整描边颜色、端点和转角为圆滑</p><p>3.在 fx - 风格化 - 圆角 中选择线路转弯处圆角半径</p><p>4.使用椭圆工具，按住 shift 画出正圆，作为地铁站图标</p><p>5.搭配使用多边形工具、钢笔工具、曲率工具画出不规则图标</p><p>6.添加一点创意</p><p>7.导出时选择全画布导出</p>]]></content>
     
     
     <categories>
