@@ -1,0 +1,295 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>阅读笔记：Memory Caching：RNNs with Growing Memory | CKglowの博客</title><meta name="author" content="CKglow"><meta name="copyright" content="CKglow"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="http:&#x2F;&#x2F;arxiv.org&#x2F;pdf&#x2F;2602.24281v1 0. 发展脉络解决 Miras 和 NL 架构面临的超长文本内存上限问题。其实可以尝试用 NL 的视角来看待 MC 这篇文章，把 MC 当做一种跨频率的知识路由机制 0.1 分段长度 -&gt; 频率在 NL 中，模型不同层级是不同更新频率。在 MC 中，核心操作是将长序列切分为多个自定义长度的片段，并缓存这些片段的检查点。  在">
+<meta property="og:type" content="article">
+<meta property="og:title" content="阅读笔记：Memory Caching：RNNs with Growing Memory">
+<meta property="og:url" content="http://ckxtm.com/2026/05/12/%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0%EF%BC%9AMemory-Caching%EF%BC%9ARNNs-with-Growing-Memory/index.html">
+<meta property="og:site_name" content="CKglowの博客">
+<meta property="og:description" content="http:&#x2F;&#x2F;arxiv.org&#x2F;pdf&#x2F;2602.24281v1 0. 发展脉络解决 Miras 和 NL 架构面临的超长文本内存上限问题。其实可以尝试用 NL 的视角来看待 MC 这篇文章，把 MC 当做一种跨频率的知识路由机制 0.1 分段长度 -&gt; 频率在 NL 中，模型不同层级是不同更新频率。在 MC 中，核心操作是将长序列切分为多个自定义长度的片段，并缓存这些片段的检查点。  在">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://ckxtm.com/img/avatar.png">
+<meta property="article:published_time" content="2026-05-12T06:46:57.000Z">
+<meta property="article:modified_time" content="2026-05-12T06:47:14.956Z">
+<meta property="article:author" content="CKglow">
+<meta property="article:tag" content="Ai">
+<meta property="article:tag" content="Paper">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://ckxtm.com/img/avatar.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "阅读笔记：Memory Caching：RNNs with Growing Memory",
+  "url": "http://ckxtm.com/2026/05/12/%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0%EF%BC%9AMemory-Caching%EF%BC%9ARNNs-with-Growing-Memory/",
+  "image": "http://ckxtm.com/img/avatar.png",
+  "datePublished": "2026-05-12T06:46:57.000Z",
+  "dateModified": "2026-05-12T06:47:14.956Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "CKglow",
+      "url": "http://ckxtm.com/"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://ckxtm.com/2026/05/12/%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0%EF%BC%9AMemory-Caching%EF%BC%9ARNNs-with-Growing-Memory/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'FancyBox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '阅读笔记：Memory Caching：RNNs with Growing Memory',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 7.3.0"></head><body><div id="web_bg" style="background-color: #fff;"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">10</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">8</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 我</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner_shanghai.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><img class="site-icon" src="/img/avatar.png" alt="Logo"><span class="site-name">CKglowの博客</span></a><a class="nav-page-title" href="/"><span class="site-name">阅读笔记：Memory Caching：RNNs with Growing Memory</span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 我</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">阅读笔记：Memory Caching：RNNs with Growing Memory</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-05-12T06:46:57.000Z" title="发表于 2026-05-12 14:46:57">2026-05-12</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-05-12T06:47:14.956Z" title="更新于 2026-05-12 14:47:14">2026-05-12</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span><span class="post-meta-separator">|</span><span class="post-meta-commentcount"><i class="far fa-comments fa-fw post-meta-icon"></i><span class="post-meta-label">评论数:</span><a href="/2026/05/12/%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0%EF%BC%9AMemory-Caching%EF%BC%9ARNNs-with-Growing-Memory/#post-comment"><span id="twikoo-count"><i class="fa-solid fa-spinner fa-spin"></i></span></a></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p><a target="_blank" rel="noopener" href="http://arxiv.org/pdf/2602.24281v1">http://arxiv.org/pdf/2602.24281v1</a></p>
+<h1 id="0-发展脉络"><a href="#0-发展脉络" class="headerlink" title="0. 发展脉络"></a>0. 发展脉络</h1><p>解决 Miras 和 NL 架构面临的超长文本内存上限问题。<br>其实可以尝试用 NL 的视角来看待 MC 这篇文章，把 MC 当做一种跨频率的知识路由机制</p>
+<h2 id="0-1-分段长度-频率"><a href="#0-1-分段长度-频率" class="headerlink" title="0.1 分段长度 -&gt; 频率"></a>0.1 分段长度 -&gt; 频率</h2><p>在 NL 中，模型不同层级是不同更新频率。在 MC 中，核心操作是将长序列切分为多个自定义长度的片段，并缓存这些片段的检查点。</p>
+<ul>
+<li>在线记忆（Online Memory）&#x3D; 最高频：在 MC 中，当前正在处理的在线记忆，每输入一个 Token 就会利用Mirsa内部目标（如梯度下降）更新一次（即频率 f&#x3D;1）。它等价于 NL 中负责处理瞬时上下文的极高频神经元。</li>
+<li>缓存记忆（Cached Memories）&#x3D; 低频：一旦一个片段结束，它的记忆状态就会被“冻结”并缓存。这意味着这些缓存的记忆是经过了一段较长的时间周期（即片段长度 C）才最终成型的一次“低频快照”。</li>
+<li>频率视角的折中：在 MC 中，Transformer 可以被看作是片段长度为1（无限高频，保留所有细节）的特例，而传统 RNN 是片段长度为无限大（极低频，全部压缩到一起）的特例。MC 的分段大小，实际上就是在为系统人为设定一个“中频”，也就是&#x3D;&#x3D;折中&#x3D;&#x3D;。</li>
+</ul>
+<h2 id="0-2-Log-Linear-CMS"><a href="#0-2-Log-Linear-CMS" class="headerlink" title="0.2 Log-Linear++ -&gt; CMS"></a>0.2 Log-Linear++ -&gt; CMS</h2><p>在 NL 中，CMS ，即系统应包含从高频到低频的连续渐变谱，高频记近期，低频记远期。其实 MC 中的 Log-Linear++ 就有点这个思想<br>用 NL 的频率视角来看，这是多频嵌套结构：</p>
+<ul>
+<li>距离当前 Token 近的片段，切分得短（更新频率高，保留细粒度的近期记忆）</li>
+<li>距离当前 Token 远的片段，切分得长（更新频率低，提取宏观长期规律）</li>
+</ul>
+<h2 id="0-3-Aggregation-跨频知识传递"><a href="#0-3-Aggregation-跨频知识传递" class="headerlink" title="0.3 Aggregation -&gt; 跨频知识传递"></a>0.3 Aggregation -&gt; 跨频知识传递</h2><p>在 NL 中，不同频率层级之间必须有通信机制，在 MC 中，作者设计的 Agg 聚合函数，其本质工作就是实现“跨频知识传递”：</p>
+<ul>
+<li>当模型在处理当前的 Query 时，它不仅读取最高频的“在线记忆”，还通过 Agg 函数同时读取过去所有低频的“缓存记忆”。</li>
+<li>GRM（门控残差记忆）最高频模块在主动决定需要从哪几个低频模块中提取历史知识。</li>
+</ul>
+<h2 id="0-4-Memory-Soup-动态生成专属频率层"><a href="#0-4-Memory-Soup-动态生成专属频率层" class="headerlink" title="0.4 Memory Soup -&gt; 动态生成专属频率层"></a>0.4 Memory Soup -&gt; 动态生成专属频率层</h2><p>NL 强调了系统应该具有自我修改的能力， MC 提出的 Memory Soup 机制针对深度非线性内存（如 Titans），将历史低频的参数矩阵（Checkpoints）进行加权平均，动态插值出一个专属于当前 Token 的新记忆网络。用频率视角来看，这是高频模块利用过去的多个低频知识库，实时合成了一个最适合当下语境的中频记忆网络来进行检索。</p>
+<blockquote>
+<p>前面发展脉络说的有点多了，接下来开始把注意力放在 MC 这篇文章本身上</p>
+</blockquote>
+<h1 id="1-现有问题"><a href="#1-现有问题" class="headerlink" title="1. 现有问题"></a>1. 现有问题</h1><ul>
+<li><strong>RNN</strong>：时间复杂度 O(L) 内存尺寸固定，内存占用极低且恒定。但也是因为内存大小恒定，导致面对长上下文和经常回忆的任务时会遗忘过去信息</li>
+<li><strong>Transformer</strong>：时间复杂度 O(L<sup>2</sup>) ，序列越长，处理时间平方级增长。内存随长度线性增长，易引发内存溢出，但也因此可以看到所有历史信息，获得了长上下文的能力</li>
+</ul>
+<h1 id="2-基本逻辑"><a href="#2-基本逻辑" class="headerlink" title="2. 基本逻辑"></a>2. 基本逻辑</h1><p>作者想提出一种算法，兼顾 Transformer 的记忆容量与 RNN 的计算效率，很显然就是计算机领域常见的&#x3D;&#x3D;折中思想&#x3D;&#x3D;。MC（Memory Caching）算法有3个主要的步骤</p>
+<ol>
+<li><strong>Segmenting</strong>：最直观的，要避免 RNN 把超长序列当做一个大片段导致的内存溢出，同时避免 Transformer 把每个词当做一个片段导致的平方计算代价，当然就是要&#x3D;&#x3D;折中&#x3D;&#x3D;，把长序列切分为多个适中长度的片段 S(1),…,S(N)，分别处理（有个小小的好处就是，切分的长度和方法可以自由设计，导致时间复杂度可以由设计者自己决定）。</li>
+<li><strong>Caching</strong>：在每个片段结束时，把它压缩后的记忆状态作为检查点存入缓存，相当于一个历史“快照”。</li>
+<li><strong>Aggregation</strong>：在输出时，通过 Agg 函数同时调动当前在线记忆与历史缓存记忆，结合现在的记忆和历史的记忆，就能避免遗忘历史信息。</li>
+</ol>
+<h1 id="3-模块选择"><a href="#3-模块选择" class="headerlink" title="3. 模块选择"></a>3. 模块选择</h1><h2 id="3-1-Agg函数的几种选择"><a href="#3-1-Agg函数的几种选择" class="headerlink" title="3.1 Agg函数的几种选择"></a>3.1 Agg函数的几种选择</h2><p>作者提出了 MC 算法的基本逻辑之后，就要着手设计用来聚合多个缓存记忆的函数（Agg函数）。作者从简单到复杂，提出了以下几种Agg函数的设计方案：</p>
+<ol>
+<li><strong>Residual Memory（残差记忆）</strong>：最简单，将当前输出直接与所有历史缓存的检索结果求和。作者模仿 Transformer 中的残差连接起了这么个名字。</li>
+<li><strong>Gated Residual Memory（GRM）（门控残差记忆）</strong>：从名字来看，显然就是在上面那种方法的基础上增加了一个“门控”。模型衡量当前 Q 与各个片段整体语义的关联度。若高度相关，则提高这段记忆的权重；若无关，则忽略这个“干扰”。</li>
+<li><strong>Memory Soup</strong>： 这是针对 Titans 等非线性深度记忆模块的特殊优化。它使用插值参数，对历史权重 θM(i)​ 进行加权平均，在每一个时间步动态生成一个专属于当前语境的非线性检索函数。它在线性内存（矩阵存储）下与 GRM 是完全等价的，但在非线性深度内存下才能体现优化成果。</li>
+<li><strong>Sparse Selective Caching（SSC）（稀疏选择性缓存）</strong>： 模仿 MoE 的 Router 机制，计算与各片段缓存的点积相似度评分，仅加载评分最高的 k 个缓存状态，其余保持休眠。极大地降低了超长序列下的内存读取压力，只加载最需要的几个记忆片段。</li>
+</ol>
+<h2 id="3-2-分段方式的几种选择"><a href="#3-2-分段方式的几种选择" class="headerlink" title="3.2 分段方式的几种选择"></a>3.2 分段方式的几种选择</h2><ol>
+<li><strong>等长分段</strong>：<ul>
+<li>复杂度：O(L<sup>2</sup>&#x2F;C)。</li>
+<li>表现：记忆精度均匀，但在极限长度下仍然有计算压力大的问题。</li>
+</ul>
+</li>
+<li><strong>对数分段</strong>：<ul>
+<li>复杂度：O(LlogL)。</li>
+<li>表现：对临近的记忆表现好（细粒度分段），但对远期的记忆表现差（粗粒度大段压缩），但时间复杂度很好。</li>
+</ul>
+</li>
+</ol>
+<h2 id="3-3-缓存初始化的选择："><a href="#3-3-缓存初始化的选择：" class="headerlink" title="3.3 缓存初始化的选择："></a>3.3 缓存初始化的选择：</h2><ol>
+<li><strong>作为检查点 (Checkpoints)</strong>：下一个片段继承上个片段的最终内存状态，强调序列学习的连续性。</li>
+<li><strong>作为独立压缩器 (Independent Compressors)</strong>：每个片段的内存从零独立初始化，确保缓存是该片段纯粹的压缩代表，避免跨片段的信息干扰。</li>
+</ol>
+<h2 id="3-3-线性或深度内存模块的影响"><a href="#3-3-线性或深度内存模块的影响" class="headerlink" title="3.3 线性或深度内存模块的影响"></a>3.3 线性或深度内存模块的影响</h2><ul>
+<li><strong>线性内存</strong>：如果使用简单的线性内存模块，MC 在数学上会退化或等价于“门控全局 Softmax 注意力”。另外，作者指出目前流行的 Hybrid Models 本质上其实就是片段长度为1、采用检查点机制的内存缓存的一个特例。</li>
+<li><strong>深度内存</strong> ：如果使用 MLP 等深度内存，MC 不会像线性内存那样发生退化，而是会创造出一类与现有混合模型完全没有重叠的全新架构，检索过程高度依赖于当前的查询词。</li>
+</ul>
+<h1 id="4-实际尝试"><a href="#4-实际尝试" class="headerlink" title="4. 实际尝试"></a>4. 实际尝试</h1><p>作者把 MC 实际插入到 Titans 和几种线性注意力变体中进行尝试，各自解决了一些问题：</p>
+<ol>
+<li><strong>滑动窗口线性注意力（SWLA）</strong>：证明 MC 可以适配简单的线性模型。由于内存是线性的（用的矩阵存储），在这里使用 GRM（门控残差内存）和 Memory Soup 在数学上会得到完全相同的公式。</li>
+<li><strong>深度线性注意力（DLA）</strong>：证明 MC 能够适配使用 Hebbian rule ，并基于负内积损失进行梯度下降优化的深度内存模块。</li>
+<li><strong>Titans</strong>：证明 MC 能够在复杂的非线性内部优化器中使用。Titans 模型在内部使用了带动量和权重衰减的梯度下降来优化 L2 回归损失，MC 成功为其增加了长文本的动态内存检索能力。</li>
+<li><strong>Log-Linear++</strong>：原版的 Log-Linear 模型虽然实现了对数级增长的隐藏状态，但它有位置偏置问题，检索时缺乏上下文感知能力。作者结合 MC 的 GRM 对其重构（得到Log-Linear++），成功为其增加了根据当前语境动态评估历史片段权重的能力。</li>
+</ol>
+<h1 id="5-实验"><a href="#5-实验" class="headerlink" title="5. 实验"></a>5. 实验</h1><p>实验得到了以下结论：</p>
+<ol>
+<li>添加 MC 机制后，所有 RNN 模型的性能都得到了稳定、显著的提升</li>
+<li>传统 RNN 在长文本中容易遗忘缺陷被弥补。不过 Transformer 确实精度最高，但 MC 已经极大地缩小了 RNN 与 Transformer 的差距</li>
+<li>对数级的分段方式（Log-Linear++）不如固定长度分段的 MC （这是前面用公式证明过的一个理论）</li>
+<li>消融实验证明以上这几个模块的改进都是很有用的</li>
+</ol>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://ckxtm.com">CKglow</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://ckxtm.com/2026/05/12/%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0%EF%BC%9AMemory-Caching%EF%BC%9ARNNs-with-Growing-Memory/">http://ckxtm.com/2026/05/12/%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0%EF%BC%9AMemory-Caching%EF%BC%9ARNNs-with-Growing-Memory/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://ckxtm.com" target="_blank">CKglowの博客</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Ai/">Ai</a><a class="post-meta__tags" href="/tags/Paper/">Paper</a></div><div class="post-share"><div class="social-share" data-image="/img/avatar.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/05/12/%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0%EF%BC%9ANested-Learning%EF%BC%9AThe-Illusion-of-Deep-Learning-Architecture/" title="阅读笔记：Nested Learning：The Illusion of Deep Learning Architecture"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">阅读笔记：Nested Learning：The Illusion of Deep Learning Architecture</div></div><div class="info-2"><div class="info-item-1">http://arxiv.org/pdf/2512.24695v1 0. 发展脉络将 Miras 的思想泛化到整个神经网络。既然 Miras 证明了 Transformer 和各种 RNN 是一个实时优化的记忆网络，那么 NL 就更进一步：不光是序列层，模型里的多层感知机（MLP）、甚至是优化器（Adam、动量），全都是在不同更新频率上运行的关联记忆网络。 1.作者认为，我们平常看到的“层数更深、参数更多、模型更强”只是表面现象；真正决定模型表达力和学习能力的，可能是模型内部存在多少层嵌套的优化问题，以及这些优化问题如何在不同时间尺度上协同工作。 2. 本文的贡献论文据此提出了 Nested Learning（NL）范式：把各种不同的模型理解成一组彼此嵌套、更新频率不同、上下文不同的学习模块。这个视角重新解释了注意力、FFN、优化器和上下文学习，也进一步推出了三条落地路径：更强的优化器、更能自我修改的序列模型，以及一个连续记忆系统。作者最终用 HOPE 架构对这些想法做了实际落地验证。 以下是这篇论文做出的几点贡献：  提出了 Nested Learning...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/05/12/%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0%EF%BC%9AIt-s-All-Connected%EF%BC%9AA-Journey-Through-Test-Time-Memorization-Attentional-Bias-Retention-and-Online-Optimization/" title="阅读笔记：It&#39;s All Connected：A Journey Through Test-Time Memorization, Attentional Bias, Retention, and Online Optimization"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-12</div><div class="info-item-2">阅读笔记：It&#39;s All Connected：A Journey Through Test-Time Memorization, Attentional Bias, Retention, and Online Optimization</div></div><div class="info-2"><div class="info-item-1">http://arxiv.org/pdf/2504.13173v1 0. 发展脉络Miras是这三篇文章的起点（Miras-&gt;NL-&gt;MC）这三篇文章完整记录了作者这个团队从重构一个简单的 RNN 层，最终重构整个LLM模型处理超长文本的历程本篇文章是理论基石，证明了无论是 Transformer 还是线性 RNN，本质上都是在测试阶段实时进行在线优化的关联记忆模块，也就是说，模型在推理时，其实内部正在不断地利用梯度下降等算法更新状态。 1.本文将神经网络架构重新理解为一种 测试时学习（Test time learning） 的关联存储模块。推理阶段被视为一个动态的学习过程，模型在提取静态知识时，实时地存储并优化当前输入序列的关联映射。把序列模型内部的内存看作一个小型的神经网络，模型在阅读新文本时，利用内部优化器（如梯度下降）实时训练并更新这块内存。 2. 现有问题作者想解决的问题是：在处理长文本时，现有的模型都有些问题  Transformer：...</div></div></div></a><a class="pagination-related" href="/2026/05/12/%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0%EF%BC%9ANested-Learning%EF%BC%9AThe-Illusion-of-Deep-Learning-Architecture/" title="阅读笔记：Nested Learning：The Illusion of Deep Learning Architecture"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-05-12</div><div class="info-item-2">阅读笔记：Nested Learning：The Illusion of Deep Learning Architecture</div></div><div class="info-2"><div class="info-item-1">http://arxiv.org/pdf/2512.24695v1 0. 发展脉络将 Miras 的思想泛化到整个神经网络。既然 Miras 证明了 Transformer 和各种 RNN 是一个实时优化的记忆网络，那么 NL 就更进一步：不光是序列层，模型里的多层感知机（MLP）、甚至是优化器（Adam、动量），全都是在不同更新频率上运行的关联记忆网络。 1.作者认为，我们平常看到的“层数更深、参数更多、模型更强”只是表面现象；真正决定模型表达力和学习能力的，可能是模型内部存在多少层嵌套的优化问题，以及这些优化问题如何在不同时间尺度上协同工作。 2. 本文的贡献论文据此提出了 Nested Learning（NL）范式：把各种不同的模型理解成一组彼此嵌套、更新频率不同、上下文不同的学习模块。这个视角重新解释了注意力、FFN、优化器和上下文学习，也进一步推出了三条落地路径：更强的优化器、更能自我修改的序列模型，以及一个连续记忆系统。作者最终用 HOPE 架构对这些想法做了实际落地验证。 以下是这篇论文做出的几点贡献：  提出了 Nested Learning...</div></div></div></a><a class="pagination-related" href="/2025/02/08/Ai%E6%8A%80%E5%B7%A7%E8%AE%B0%E5%BD%95-Adobe-illustrator/" title="Ai技巧记录(Adobe illustrator)"><img class="cover" src="/img/ailogo.avif" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-02-08</div><div class="info-item-2">Ai技巧记录(Adobe illustrator)</div></div><div class="info-2"><div class="info-item-1">Ai小技巧记录本文非常个人向，当作笔记记录一下小白在轻度使用时必备的一些技能，发文时刚刚进行一个Logo设计，发现很多基本操作已经忘却了，在此记录一下可以参考另一篇Ai实战记录博客 怎样画一张轨道交通图 剪切图形例如，我们需要一个不规则半圆，其实可以直接用椭圆工具画一个，然后点住顶部小圆点&#x2F;在顶部选择扇形角度即可但剪切图形显然更加普适  画一个圆，点’Ctrl+Shift+O’，让图形自动识别边框路径点 使用钢笔工具在剪切位置画一道直线 打开’窗口-路径查找器-分割’ 选择取消编组 得到一个新的图形  设计字体有时候我们遇到一个很喜欢的字体，但些许设计我们不满意，可以手动调整  选中字 点’Ctrl+Shift+O’，让图形自动识别边框路径点 取消编组 使用路径点工具，调整字的形状，可以实现笔画更改、圆角，配合上文提到的路径查找器可以实现更多设计  </div></div></div></a><a class="pagination-related" href="/2025/02/03/MetroMap/" title="怎样画一张轨道交通图"><img class="cover" src="/img/cityskylines.png" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-02-03</div><div class="info-item-2">怎样画一张轨道交通图</div></div><div class="info-2"><div class="info-item-1">怎样画一张地铁图 | Ai1.使用钢笔工具，点击创建锚点后，按住 shift 移动光标（shift使光标只能水平、垂直、45°移动），继续创建锚点画出线路基本走向 2.调整描边颜色、端点和转角为圆滑 3.在 fx - 风格化 - 圆角 中选择线路转弯处圆角半径 4.使用椭圆工具，按住 shift 画出正圆，作为地铁站图标 5.搭配使用多边形工具、钢笔工具、曲率工具画出不规则图标 6.添加一点创意 7.导出时选择全画布导出 附上：城市天际线架空城市轨道交通图  </div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="twikoo-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.png" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">CKglow</div><div class="author-info-description">记录生活</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">10</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">8</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/ckxtm" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="https://space.bilibili.com/35168669" target="_blank" title="BiliBili"><i class="fa-brands fa-bilibili" style="color: #FF69B4;"></i></a><a class="social-icon" href="https://weibo.com/u/5762496013" target="_blank" title="Weibo"><i class="fa-brands fa-weibo" style="color: #FF3030;"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#0-%E5%8F%91%E5%B1%95%E8%84%89%E7%BB%9C"><span class="toc-number">1.</span> <span class="toc-text">0. 发展脉络</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#0-1-%E5%88%86%E6%AE%B5%E9%95%BF%E5%BA%A6-%E9%A2%91%E7%8E%87"><span class="toc-number">1.1.</span> <span class="toc-text">0.1 分段长度 -&gt; 频率</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0-2-Log-Linear-CMS"><span class="toc-number">1.2.</span> <span class="toc-text">0.2 Log-Linear++ -&gt; CMS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0-3-Aggregation-%E8%B7%A8%E9%A2%91%E7%9F%A5%E8%AF%86%E4%BC%A0%E9%80%92"><span class="toc-number">1.3.</span> <span class="toc-text">0.3 Aggregation -&gt; 跨频知识传递</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#0-4-Memory-Soup-%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90%E4%B8%93%E5%B1%9E%E9%A2%91%E7%8E%87%E5%B1%82"><span class="toc-number">1.4.</span> <span class="toc-text">0.4 Memory Soup -&gt; 动态生成专属频率层</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#1-%E7%8E%B0%E6%9C%89%E9%97%AE%E9%A2%98"><span class="toc-number">2.</span> <span class="toc-text">1. 现有问题</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#2-%E5%9F%BA%E6%9C%AC%E9%80%BB%E8%BE%91"><span class="toc-number">3.</span> <span class="toc-text">2. 基本逻辑</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#3-%E6%A8%A1%E5%9D%97%E9%80%89%E6%8B%A9"><span class="toc-number">4.</span> <span class="toc-text">3. 模块选择</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#3-1-Agg%E5%87%BD%E6%95%B0%E7%9A%84%E5%87%A0%E7%A7%8D%E9%80%89%E6%8B%A9"><span class="toc-number">4.1.</span> <span class="toc-text">3.1 Agg函数的几种选择</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-2-%E5%88%86%E6%AE%B5%E6%96%B9%E5%BC%8F%E7%9A%84%E5%87%A0%E7%A7%8D%E9%80%89%E6%8B%A9"><span class="toc-number">4.2.</span> <span class="toc-text">3.2 分段方式的几种选择</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-3-%E7%BC%93%E5%AD%98%E5%88%9D%E5%A7%8B%E5%8C%96%E7%9A%84%E9%80%89%E6%8B%A9%EF%BC%9A"><span class="toc-number">4.3.</span> <span class="toc-text">3.3 缓存初始化的选择：</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-3-%E7%BA%BF%E6%80%A7%E6%88%96%E6%B7%B1%E5%BA%A6%E5%86%85%E5%AD%98%E6%A8%A1%E5%9D%97%E7%9A%84%E5%BD%B1%E5%93%8D"><span class="toc-number">4.4.</span> <span class="toc-text">3.3 线性或深度内存模块的影响</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#4-%E5%AE%9E%E9%99%85%E5%B0%9D%E8%AF%95"><span class="toc-number">5.</span> <span class="toc-text">4. 实际尝试</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#5-%E5%AE%9E%E9%AA%8C"><span class="toc-number">6.</span> <span class="toc-text">5. 实验</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/05/12/%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0%EF%BC%9AMemory-Caching%EF%BC%9ARNNs-with-Growing-Memory/" title="阅读笔记：Memory Caching：RNNs with Growing Memory">阅读笔记：Memory Caching：RNNs with Growing Memory</a><time datetime="2026-05-12T06:46:57.000Z" title="发表于 2026-05-12 14:46:57">2026-05-12</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/05/12/%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0%EF%BC%9ANested-Learning%EF%BC%9AThe-Illusion-of-Deep-Learning-Architecture/" title="阅读笔记：Nested Learning：The Illusion of Deep Learning Architecture">阅读笔记：Nested Learning：The Illusion of Deep Learning Architecture</a><time datetime="2026-05-12T06:46:17.000Z" title="发表于 2026-05-12 14:46:17">2026-05-12</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/05/12/%E9%98%85%E8%AF%BB%E7%AC%94%E8%AE%B0%EF%BC%9AIt-s-All-Connected%EF%BC%9AA-Journey-Through-Test-Time-Memorization-Attentional-Bias-Retention-and-Online-Optimization/" title="阅读笔记：It's All Connected：A Journey Through Test-Time Memorization, Attentional Bias, Retention, and Online Optimization">阅读笔记：It's All Connected：A Journey Through Test-Time Memorization, Attentional Bias, Retention, and Online Optimization</a><time datetime="2026-05-12T06:44:49.000Z" title="发表于 2026-05-12 14:44:49">2026-05-12</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/02/09/%E5%88%9B%E5%BB%BA%E4%B8%AA%E4%BA%BA%E8%81%8A%E5%A4%A9%E7%9A%84telegram%20bot/" title="创建个人聊天的telegram bot">创建个人聊天的telegram bot</a><time datetime="2026-02-09T12:07:43.000Z" title="发表于 2026-02-09 20:07:43">2026-02-09</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/01/06/%E4%BD%BF%E7%94%A8UVR5%E5%88%86%E7%A6%BB%E4%BC%B4%E5%A5%8F%E5%92%8C%E4%BA%BA%E5%A3%B0/" title="使用UVR5分离伴奏和人声">使用UVR5分离伴奏和人声</a><time datetime="2026-01-06T13:49:12.000Z" title="发表于 2026-01-06 21:49:12">2026-01-06</time></div></div></div></div></div></div></main><footer id="footer" style="background-image: url(/img/foot_shanghaimetro.png);"><div id="footer-wrap"><div class="copyright">&copy;2019 - 2026 By CKglow</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="/"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><div class="js-pjax"><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+
+  const getCount = () => {
+    const countELement = document.getElementById('twikoo-count')
+    if(!countELement) return
+    twikoo.getCommentsCount({
+      envId: 'https://twikoo.ckxtm.com/',
+      region: '',
+      urls: [window.location.pathname],
+      includeReply: false
+    }).then(res => {
+      countELement.textContent = res[0].count
+    }).catch(err => {
+      console.error(err)
+    })
+  }
+
+  const init = (el = document, path = location.pathname) => {
+    twikoo.init({
+      el: el.querySelector('#twikoo-wrap'),
+      envId: 'https://twikoo.ckxtm.com/',
+      region: '',
+      onCommentLoaded: () => {
+        btf.loadLightbox(document.querySelectorAll('#twikoo .tk-content img:not(.tk-owo-emotion)'))
+      },
+      ...option,
+      path: isShuoshuo ? path : (option && option.path) || path
+    })
+
+    GLOBAL_CONFIG_SITE.pageType === 'post' && getCount()
+
+    isShuoshuo && (window.shuoshuoComment.destroyTwikoo = () => {
+      if (el.children.length) {
+        el.innerHTML = ''
+        el.classList.add('no-comment')
+      }
+    })
+  }
+
+  const loadTwikoo = (el, path) => {
+    if (typeof twikoo === 'object') setTimeout(() => init(el, path), 0)
+    else btf.getScript('https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js').then(() => init(el, path))
+  }
+
+  if (isShuoshuo) {
+    'Twikoo' === 'Twikoo'
+      ? window.shuoshuoComment = { loadComment: loadTwikoo }
+      : window.loadOtherComment = loadTwikoo
+    return
+  }
+
+  if ('Twikoo' === 'Twikoo' || !false) {
+    if (false) btf.loadComment(document.getElementById('twikoo-wrap'), loadTwikoo)
+    else loadTwikoo()
+  } else {
+    window.loadOtherComment = loadTwikoo
+  }
+})()</script></div><canvas class="fireworks" mobile="false"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/fireworks.min.js"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
